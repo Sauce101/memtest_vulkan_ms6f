@@ -2097,7 +2097,7 @@ fn init_running_env() -> ProcessEnv {
         //     "memtest_vulkan v{} by GpuZelenograd",
         //     env!("CARGO_PKG_VERSION")
         // );
-        println!("memtest_vulkan v0.5.0-5min");
+        println!("memtest_vulkan_ms6f v0.5.0-5min");
         println!("5-minute VRAM test - automatic PASS/FAIL");
         println!("Modified by Michael Saucedo");
         println!("Newegg Trade-In Department");
