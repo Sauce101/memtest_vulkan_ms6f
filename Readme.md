@@ -1,4 +1,4 @@
-# [memtest_vulkan](https://github.com/GpuZelenograd/memtest_vulkan/blob/main/Readme.md) - GPU memory testing tool
+# [memtest_vulkan](https://github.com/GpuZelenograd/memtest_vulkan/blob/main/Readme.md) ms6f - GPU memory testing tool
 
 Opensource cross-platform tool written in vulkan compute to stress test video memory for stability during overclocking or repair.
 
