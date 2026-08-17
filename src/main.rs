@@ -1034,10 +1034,15 @@ fn test_device<Writer: std::io::Write>(
     let mut read_bytes = 0i64;
     let mut next_report_duration = time::Duration::from_secs(0);
     let extended_test_report_duration = time::Duration::from_secs(30);
+    // ADDED
+    let standard_test_duration = time::Duration::from_secs(300);
     let mut reports_before_standard_done = 12i32;
     let mut write_duration = time::Duration::ZERO;
     let mut buffer_in = IOBuf::for_initial_iteration();
     let first_iter_start = time::Instant::now();
+    // ADDED
+    let mut standard_test_time = time::Duration::ZERO;
+    let mut load_transition_time = time::Duration::ZERO;
     let mut last_status_output = first_iter_start;
     let mut last_error_state = "          NO ERRORS       ".to_owned();
     for iteration in 1..=iter_count {
@@ -1127,40 +1132,92 @@ fn test_device<Writer: std::io::Write>(
                 0f32
             };
             let second1 = time::Duration::from_secs(1);
+            // START
             if next_report_duration.is_zero() {
                 writeln!(log_dupler, "Standard 5-minute test of {}", selected_label)?;
                 next_report_duration = second1; //2nd report after 1 second
             } else if next_report_duration == second1 {
                 close::raise_status_bit(close::app_status::INITED_OK);
                 next_report_duration = second1 * 5; //3rd report after 5 seconds
+            // } else {
+            //     next_report_duration = extended_test_report_duration; //all later reports
+            // }
             } else {
-                next_report_duration = extended_test_report_duration; //all later reports
+                let standard_test_remaining =
+                    standard_test_duration.saturating_sub(first_iter_start.elapsed());
+
+                next_report_duration = std::cmp::min(
+                    extended_test_report_duration,
+                    standard_test_remaining,
+                );
             }
+            // END
+            // START
+            // if reports_before_standard_done == 0 {
+            //     let has_errors = close::check_any_bits_set(
+            //         close::fetch_status(),
+            //         close::app_status::RUNTIME_ERRORS,
+            //     );
+            //     match has_errors {
+            //         true => writeln!(log_dupler, "Standard 5-minute test fail - ERRORS FOUND"),
+            //         false => writeln!(
+            //             log_dupler,
+            //             "Standard 5-minute test PASSed! Just press Ctrl+C unless you plan long test run."
+            //         ),
+            //     }?;
+            //     writeln!(
+            //         log_dupler,
+            //         "Extended endless test started; testing more than 2 hours is usually unneeded"
+            //     )?;
+            //     writeln!(
+            //         log_dupler,
+            //         "use Ctrl+C to stop it when you decide it's enough"
+            //     )?;
+            // } else {
+            //     let formatted_time_hhmmss = (moment_iter_ends - first_iter_start).hhmmssxxx();
+            //     writeln!(
+            //         log_dupler,
+            //         "{}    written:{:7.1}GB{:7.1}GB/s      checked:{:7.1}GB{:7.1}GB/s     {}",
+            //         last_error_state,
+            //         written_bytes as f32 / GB,
+            //         write_speed_gbps,
+            //         read_bytes as f32 / GB,
+            //         check_speed_gbps,
+            //         formatted_time_hhmmss
+            //     )?;
+            // }
+            // reports_before_standard_done -= 1;
+            // if reports_before_standard_done == 0 {
+            //     // The last iteration before report has a sleep before it to test hot gpu behaviour
+            //     // in a situation of load pause and low-performance memory frequency
+            //     std::thread::sleep(next_report_duration / 2);
+            // }
+            // written_bytes = 0i64;
+            // read_bytes = 0i64;
+            // write_duration = time::Duration::ZERO;
+            // last_status_output = time::Instant::now();
+            // END
             if reports_before_standard_done == 0 {
                 let has_errors = close::check_any_bits_set(
                     close::fetch_status(),
                     close::app_status::RUNTIME_ERRORS,
                 );
+
                 match has_errors {
-                    true => writeln!(log_dupler, "Standard 5-minute test fail - ERRORS FOUND"),
+                    true => writeln!(
+                        log_dupler,
+                        "Standard 5-minute test fail - ERRORS FOUND"
+                    ),
                     false => writeln!(
                         log_dupler,
-                        "Standard 5-minute test PASSed! Just press Ctrl+C unless you plan long test run."
+                        "Standard 5-minute test PASSed!"
                     ),
                 }?;
-                writeln!(
-                    log_dupler,
-                    "Extended endless test started; testing more than 2 hours is usually unneeded"
-                )?;
-                writeln!(
-                    log_dupler,
-                    "use Ctrl+C to stop it when you decide it's enough"
-                )?;
             } else {
                 let formatted_time_hhmmss = (moment_iter_ends - first_iter_start).hhmmssxxx();
                 writeln!(
                     log_dupler,
-                    "{}    written:{:7.1}GB{:7.1}GB/s      checked:{:7.1}GB{:7.1}GB/s     {}",
+                    "{}    written:{:7.1}GB{:7.1}GB/s      checked:{:7.1}GB{:7.1}GB/s      {}",
                     last_error_state,
                     written_bytes as f32 / GB,
                     write_speed_gbps,
@@ -1169,16 +1226,172 @@ fn test_device<Writer: std::io::Write>(
                     formatted_time_hhmmss
                 )?;
             }
+
             reports_before_standard_done -= 1;
-            if reports_before_standard_done == 0 {
+
+            // if reports_before_standard_done == 0 {
+            // ADDED
+            if first_iter_start.elapsed() >= standard_test_duration {
+                // ADDED
+                // Record the time when the standard test reaches its completion point.
+                standard_test_time = first_iter_start.elapsed();
+
                 // The last iteration before report has a sleep before it to test hot gpu behaviour
                 // in a situation of load pause and low-performance memory frequency
-                std::thread::sleep(next_report_duration / 2);
+
+                // ADDED
+                let transition_start = time::Instant::now();
+
+                // std::thread::sleep(next_report_duration / 2);
+                std::thread::sleep(extended_test_report_duration / 2);
+
+                // ADDED
+                // Record the actual duration of the load transition.
+                load_transition_time = transition_start.elapsed();
+
+                // ADDED for final processing
+                // let final_processing_start = time::Instant::now();
             }
+
             written_bytes = 0i64;
             read_bytes = 0i64;
             write_duration = time::Duration::ZERO;
             last_status_output = time::Instant::now();
+
+            // if reports_before_standard_done == 0 {
+            //     let has_errors = close::check_any_bits_set(
+            //         close::fetch_status(),
+            //         close::app_status::RUNTIME_ERRORS,
+            //     );
+
+            //     writeln!(
+            //         log_dupler,
+            //         "========================================"
+            //     )?;
+
+            //     if has_errors {
+            //         writeln!(
+            //             log_dupler,
+            //             "memtest_vulkan: TEST FAILED"
+            //         )?;
+            //         writeln!(
+            //             log_dupler,
+            //             "Memory errors detected."
+            //         )?;
+            //     } else {
+            //         writeln!(
+            //             log_dupler,
+            //             "memtest_vulkan: TEST PASSED"
+            //         )?;
+            //         writeln!(
+            //             log_dupler,
+            //             "No memory errors detected."
+            //         )?;
+            //     }
+
+            //     writeln!(
+            //         log_dupler,
+            //         "Standard 5-minute test completed."
+            //     )?;
+            //     writeln!(
+            //         log_dupler,
+            //         "========================================"
+            //     )?;
+
+            //     break;
+            // }
+
+            // ADDED
+            // if reports_before_standard_done == 0 {
+            if standard_test_time > time::Duration::ZERO {
+                // ADDED
+                // Start measuring final processing.
+                let final_processing_start = time::Instant::now();
+
+                let has_errors = close::check_any_bits_set(
+                    close::fetch_status(),
+                    close::app_status::RUNTIME_ERRORS,
+                );
+
+                // ADDED for final processing time
+                // Measure the time spent performing the final processing.
+                let final_processing_time = final_processing_start.elapsed();
+
+                let total_test_time = first_iter_start.elapsed();
+
+                // let final_processing_time = total_test_time
+                //     .saturating_sub(standard_test_time)
+                //     .saturating_sub(load_transition_time);
+
+                writeln!(
+                    log_dupler,
+                    "========================================"
+                )?;
+
+                if has_errors {
+                    writeln!(
+                        log_dupler,
+                        "memtest_vulkan: TEST FAILED"
+                    )?;
+                    writeln!(
+                        log_dupler,
+                        "Memory errors detected."
+                    )?;
+                } else {
+                    writeln!(
+                        log_dupler,
+                        "memtest_vulkan: TEST PASSED"
+                    )?;
+                    writeln!(
+                        log_dupler,
+                        "No memory errors detected."
+                    )?;
+                }
+
+                writeln!(
+                    log_dupler,
+                    "Standard 5-minute test completed."
+                )?;
+
+                writeln!(log_dupler)?;
+
+                writeln!(
+                    log_dupler,
+                    "Standard test time:       {:.6}s",
+                    standard_test_time.as_secs_f64()
+                )?;
+
+                writeln!(
+                    log_dupler,
+                    "Load transition:          {:.6}s",
+                    load_transition_time.as_secs_f64()
+                )?;
+
+                writeln!(
+                    log_dupler,
+                    "Final processing:         {:.6}s",
+                    final_processing_time.as_secs_f64()
+                )?;
+
+                writeln!(
+                    log_dupler,
+                    "----------------------------------------"
+                )?;
+
+                writeln!(
+                    log_dupler,
+                    "Total test time:          {:.6}s",
+                    total_test_time.as_secs_f64()
+                )?;
+
+                writeln!(
+                    log_dupler,
+                    "========================================"
+                )?;
+
+                break;
+            }
+            // END
         }
         if stop_testing {
             let _ = writeln!(log_dupler, "received user interruption, testing stopped");
@@ -1876,14 +2089,19 @@ fn init_running_env() -> ProcessEnv {
         }
     }
     if process_env.interactive {
-        print!("https://github.com/GpuZelenograd/");
-        let _ = std::io::stdout().flush();
+        // print!("https://github.com/GpuZelenograd/");
+        // let _ = std::io::stdout().flush();
         let mut color_setter = input::Reader::default();
         color_setter.set_pass_fail_accent_color(false);
-        println!(
-            "memtest_vulkan v{} by GpuZelenograd",
-            env!("CARGO_PKG_VERSION")
-        );
+        // println!(
+        //     "memtest_vulkan v{} by GpuZelenograd",
+        //     env!("CARGO_PKG_VERSION")
+        // );
+        println!("memtest_vulkan v0.5.0-5min");
+        println!("5-minute VRAM test - automatic PASS/FAIL");
+        println!("Modified by Michael Saucedo");
+        println!("Newegg Trade-In Department");
+        println!("Original project by GpuZelenograd");
         drop(color_setter);
         println!("To finish testing use Ctrl+C");
     }
