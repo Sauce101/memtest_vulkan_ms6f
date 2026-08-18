@@ -2151,8 +2151,16 @@ fn display_testing_outcome(test_status: TestStatus, env: &ProcessEnv) -> ! {
             false => println!("memtest_vulkan: no any errors, testing PASSed."),
         }
     }
+    // if env.interactive {
+    //     key_reader.wait_any_key(true);
+    // }
+    // ADDED for EXIT
     if env.interactive {
-        key_reader.wait_any_key(true);
+        println!();
+        println!("Press any key to close...");
+        // ADDED Changed to false
+        // key_reader.wait_any_key(true);
+        key_reader.wait_any_key(false);
     }
     drop(key_reader); //restore terminal state before exiting
     close::immediate_exit(false)
