@@ -2148,7 +2148,7 @@ fn display_testing_outcome(test_status: TestStatus, env: &ProcessEnv) -> ! {
         }
         match has_errors {
             true => println!("memtest_vulkan: memory/gpu ERRORS FOUND, testing finished."),
-            false => println!("memtest_vulkan: no any errors, testing PASSed."),
+            false => println!("memtest_vulkan: no errors detected, testing PASSed."),
         }
     }
     // if env.interactive {
@@ -2157,10 +2157,11 @@ fn display_testing_outcome(test_status: TestStatus, env: &ProcessEnv) -> ! {
     // ADDED for EXIT
     if env.interactive {
         println!();
-        println!("Press any key to close...");
+        // 
+        // 
+        // println!("Press any key to close...");
         // ADDED Changed to false
-        // key_reader.wait_any_key(true);
-        key_reader.wait_any_key(false);
+        key_reader.wait_any_key(true);
     }
     drop(key_reader); //restore terminal state before exiting
     close::immediate_exit(false)
@@ -2197,6 +2198,9 @@ fn display_result<Writer: std::io::Write>(
                 }
                 let _ = log_dupler.flush();
                 if env.interactive {
+                    // println!();
+                    // println!("Press any key to close...");
+                    
                     let mut key_reader = input::Reader::default();
                     key_reader.wait_any_key(true);
                     drop(key_reader); //restore terminal state before exiting

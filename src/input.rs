@@ -1,7 +1,7 @@
 use mortal::Event;
 use mortal::terminal::Key;
 
-use std::io::Write;
+// use std::io::Write;
 
 #[derive(Default)]
 pub struct Reader {
@@ -84,25 +84,25 @@ impl Reader {
     }
 
     pub fn wait_any_key(&mut self, immediate_close_on_signal_during_wait: bool) {
-        if crate::close::close_requested() {
-            //interaction methods not available while closing on windows
-            let seconds_wait = 3;
-            let mut out = std::io::stdout();
-            if write!(out, "Closing in {seconds_wait} seconds: ").is_err() {
-                return;
-            }
-            for i in (1..=seconds_wait).rev() {
-                if write!(out, "{i}... ").is_err() {
-                    return;
-                }
-                if out.flush().is_err() {
-                    return;
-                }
-                std::thread::sleep(std::time::Duration::from_secs(1));
-            }
-            println!();
-            return;
-        }
+        // if crate::close::close_requested() {
+        //     //interaction methods not available while closing on windows
+        //     let seconds_wait = 3;
+        //     let mut out = std::io::stdout();
+        //     if write!(out, "Closing in {seconds_wait} seconds: ").is_err() {
+        //         return;
+        //     }
+        //     for i in (1..=seconds_wait).rev() {
+        //         if write!(out, "{i}... ").is_err() {
+        //             return;
+        //         }
+        //         if out.flush().is_err() {
+        //             return;
+        //         }
+        //         std::thread::sleep(std::time::Duration::from_secs(1));
+        //     }
+        //     println!();
+        //     return;
+        // }
 
         if !self.try_prepare_terminal() {
             //terminal input not available, don't perform wait.
@@ -120,7 +120,7 @@ impl Reader {
             }
         }
         if terminal
-            .write_str("  press any key to continue...")
+            .write_str("  press any key to close...")
             .is_err()
         {
             return;
