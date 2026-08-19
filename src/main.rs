@@ -1331,7 +1331,7 @@ fn test_device<Writer: std::io::Write>(
                 if has_errors {
                     writeln!(
                         log_dupler,
-                        "memtest_vulkan: TEST FAILED"
+                        "memtest_vulkan_ms6f: TEST FAILED"
                     )?;
                     writeln!(
                         log_dupler,
@@ -1340,7 +1340,7 @@ fn test_device<Writer: std::io::Write>(
                 } else {
                     writeln!(
                         log_dupler,
-                        "memtest_vulkan: TEST PASSED"
+                        "memtest_vulkan_ms6f: TEST PASSED"
                     )?;
                     writeln!(
                         log_dupler,
